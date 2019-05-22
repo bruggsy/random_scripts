@@ -1,0 +1,280 @@
+---
+title: "5/23/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+```{r total-dropouts, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+dropout.genes <- readRDS('data/recount/dropouts_per_sample_list.RDS')
+
+total.drops <- sapply(dropout.genes,function(x) x['total'])
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_bulkOnly_p40.RDS')
+used.samps <- rownames(tsne.dat)
+
+## over50.projs <- readRDS('data/recount/recount_entries_over50_noSingle.RDS')
+## over50.projs <- read.table('data/recount/recount_over50_labelled.csv',sep=',',stringsAsFactors=F)
+## over50.projs <- subset(over50.projs,V2=='RNA-seq')
+
+recount.meta <- readRDS('src/tsne_shiny/data/recount_meta_sampletype.RDS')
+
+## used.samps <- subset(recount.meta,proj_id %in% over50.projs$V1 | proj_id == 'TCGA' | proj_id == 'SRP012682')$run_id
+
+protein.drops <- sapply(dropout.genes,function(x) x['protein_coding'])
+protein.drops[is.na(protein.drops)] <- 0
+
+plot.df <- data.frame(total.drops,protein.drops)
+
+rownames(plot.df) <- names(dropout.genes)
+plot.df <- plot.df[used.samps,]
+
+g <- ggplot() +
+    geom_histogram(data=plot.df,aes(x=total.drops)) + 
+    ggtitle('Total dropouts genes per sample bulkOnly_over50')
+
+g
+
+```
+
+```{r protein-dropouts, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+g <- ggplot() +
+    geom_histogram(data=plot.df,aes(x=protein.drops)) + 
+    ggtitle('Total protein dropout genes per sample bulkOnly_over50')
+
+g
+
+```
+
+```{r high-dropout-clus, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+leiden.dat <- read.table('results/recount/clustering/leiden_rsweep_pca_over50_bulkOnly_k40_sim.tsv',sep='\t',row.names=1)
+rownames(leiden.dat) <- rownames(tsne.dat)
+colnames(leiden.dat) <- c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001')
+
+high.dropouts <- subset(plot.df,total.drops > 50000)
+
+dropout.clus <- leiden.dat[rownames(high.dropouts),]
+
+print('> 50,000 clusters')
+
+dropout.tab <- table(dropout.clus[['0.025']])
+
+dropout.tab
+
+print('All Leiden Table')
+
+table(leiden.dat[['0.025']])[names(dropout.tab)]
+
+
+```
+
+```{r total-dropouts-remove-SRP061240-SRP012461, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+dropout.genes <- readRDS('data/recount/dropouts_per_sample_list.RDS')
+
+total.drops <- sapply(dropout.genes,function(x) x['total'])
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_bulkOnly_p40.RDS')
+used.samps <- rownames(tsne.dat)
+
+## over50.projs <- readRDS('data/recount/recount_entries_over50_noSingle.RDS')
+## over50.projs <- read.table('data/recount/recount_over50_labelled.csv',sep=',',stringsAsFactors=F)
+## over50.projs <- subset(over50.projs,V2=='RNA-seq')
+
+recount.meta <- readRDS('src/tsne_shiny/data/recount_meta_sampletype.RDS')
+
+## used.samps <- subset(recount.meta,proj_id %in% over50.projs$V1 | proj_id == 'TCGA' | proj_id == 'SRP012682')$run_id
+
+protein.drops <- sapply(dropout.genes,function(x) x['protein_coding'])
+protein.drops[is.na(protein.drops)] <- 0
+
+plot.df <- data.frame(total.drops,protein.drops)
+
+rownames(plot.df) <- names(dropout.genes)
+plot.df <- plot.df[used.samps,]
+
+used.samps.2 <- rownames(plot.df)[recount.meta[rownames(plot.df),'proj_id'] != 'SRP012461' & recount.meta[rownames(plot.df),'proj_id'] != 'SRP061240']
+
+plot.df <- plot.df[used.samps.2,]
+
+g <- ggplot() +
+    geom_histogram(data=plot.df,aes(x=total.drops)) + 
+    ggtitle('Total dropouts genes per sample bulkOnly_over50 removed two projects')
+
+g
+
+```
+
+```{r protein-dropouts-removed, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+g <- ggplot() +
+    geom_histogram(data=plot.df,aes(x=protein.drops)) + 
+    ggtitle('Total dropouts protein genes per sample bulkOnly_over50 2 projs remove')
+
+g
+
+```
+
+
+```{r high-dropout-clus-removal, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+leiden.dat <- read.table('results/recount/clustering/leiden_rsweep_pca_over50_bulkOnly_k40_sim.tsv',sep='\t',row.names=1)
+rownames(leiden.dat) <- rownames(tsne.dat)
+colnames(leiden.dat) <- c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001')
+
+high.dropouts <- subset(plot.df,total.drops > 50000)
+
+dropout.clus <- leiden.dat[rownames(high.dropouts),]
+
+print('> 50,000 clusters')
+
+dropout.tab <- table(dropout.clus[['0.025']])
+
+dropout.tab
+
+print('All Leiden Table')
+
+table(leiden.dat[['0.025']])[names(dropout.tab)]
+
+
+```
+
+```{r sample-removal-sd-total, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+dropout.genes <- readRDS('data/recount/dropouts_per_sample_list.RDS')
+total.drops <- sapply(dropout.genes,function(x) x['total'])
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_bulkOnly_p40.RDS')
+used.samps <- rownames(tsne.dat)
+
+recount.meta <- readRDS('src/tsne_shiny/data/recount_meta_sampletype.RDS')
+
+## used.samps <- subset(recount.meta,proj_id %in% over50.projs$V1 | proj_id == 'TCGA' | proj_id == 'SRP012682')$run_id
+
+protein.drops <- sapply(dropout.genes,function(x) x['protein_coding'])
+protein.drops[is.na(protein.drops)] <- 0
+
+plot.df <- data.frame(total.drops,protein.drops)
+rownames(plot.df) <- names(dropout.genes)
+plot.df <- plot.df[used.samps,]
+
+drop.means <- apply(plot.df,2,mean)
+drop.sd <- apply(plot.df,2,sd)
+
+filtered.plot.df <- subset(plot.df,total.drops < (drop.means[1] + 2*drop.sd[1]))
+
+g <- ggplot() +
+    geom_histogram(data=filtered.plot.df,aes(x=total.drops)) + 
+    ggtitle('Total dropouts genes per sample filtered by mean + 2*sd bulkOnly_over50') +
+    xlim(0,max(plot.df[,1]))
+
+g
+
+```
+
+```{r sample-removal-sd-prot, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+filtered.plot.df <- subset(plot.df,protein.drops < (drop.means[2] + 3*drop.sd[2]))
+
+saveRDS(filtered.plot.df,'data/recount/recount_over50_bulkOnly_dropout_filtered_pc_3sd.RDS')
+
+g <- ggplot() +
+    geom_histogram(data=filtered.plot.df,aes(x=protein.drops)) + 
+    ggtitle('Total protein dropouts genes per sample by protein mean + 3*sd bulkOnly_over50') +
+    xlim(0,max(plot.df[,2]))
+
+g
+
+```
+
+```{r sample-removal-sd-prot-total-hist, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+g <- ggplot() +
+    geom_histogram(data=filtered.plot.df,aes(x=total.drops)) + 
+    ggtitle('Total dropouts genes per sample filtered by protein mean + 3*sd bulkOnly_over50') +
+    xlim(0,max(plot.df[,1]))
+
+g
+
+```
+
+```{r nosmall-nosingle-recount, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+dropout.genes <- readRDS('data/recount/dropouts_per_sample_list.RDS')
+total.drops <- sapply(dropout.genes,function(x) x['total'])
+
+recount.meta <- readRDS('src/tsne_shiny/data/recount_meta_sampletype.RDS')
+
+protein.drops <- sapply(dropout.genes,function(x) x['protein_coding'])
+protein.drops[is.na(protein.drops)] <- 0
+
+plot.df <- data.frame(total.drops,protein.drops)
+rownames(plot.df) <- gsub('[.]total','',rownames(plot.df))
+
+filtered.projs <- readRDS('data/recount/recount_entries_noSingle_noSmall.RDS')
+used.samps <- subset(recount.meta,proj_id %in% filtered.projs | proj_id == 'TCGA' | proj_id == 'SRP012682')$run_id
+
+plot.df <- plot.df[intersect(used.samps,rownames(plot.df)),]
+
+drop.means <- apply(plot.df,2,mean)
+drop.sd <- apply(plot.df,2,sd)
+
+g <- ggplot() + geom_histogram(data=plot.df,aes(x=total.drops)) +
+    ggtitle('Total dropouts no single no small')
+
+g
+
+```
+
+
+```{r sample-removal-allrecount, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+filtered.plot.df <- subset(plot.df,total.drops < (drop.means[1] + 2*drop.sd[1]))
+
+g <- ggplot() + geom_histogram(data=filtered.plot.df,aes(x=total.drops)) +
+    ggtitle('Total dropouts filtered mean + 2*sd all genes all recount')
+
+g
+
+```
+
+```{r sample-removal-allrecount-pc-filtered, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+filtered.plot.df <- subset(plot.df,protein.drops < (drop.means[2] + 2*drop.sd[2]))
+
+g <- ggplot() + geom_histogram(data=filtered.plot.df,aes(x=total.drops)) +
+    ggtitle('Total dropouts filtered mean + 2*sd pc genes all recount')
+
+g
+
+```
+
+
+```{r sample-removal-allrecount-pc-filtered-pc-hist, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+filtered.plot.df <- subset(plot.df,protein.drops < (drop.means[2] + 2*drop.sd[2]))
+
+g <- ggplot() + geom_histogram(data=filtered.plot.df,aes(x=protein.drops)) +
+    ggtitle('Total protein dropouts filtered mean + 2*sd protein genes all recount')
+
+g
+
+```

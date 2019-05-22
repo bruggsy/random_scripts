@@ -3,22 +3,67 @@
 import json
 import csv
 import urllib
+import requests
+import re
 
-WORK_DIR = '/Users/Jake/Documents/Projects/Mercator/'
+def getParents(term_id):
 
-samples = set([])
-samples_2_runs = {}
+    if 'UBERON' in term_id:
+        ontology = 'uberon'
+    elif 'DOID' in term_id:
+        ontology = 'doid'
+    elif 'cl' in term_id:
+        ontology = 'cl'
 
-if not 'metasra' in locals():
-    with open(WORK_DIR + 'downloads/metaSRA/metasra.v1-4.json','r') as in_file:
-        metasra = json.load(in_file)
+
+    term_id = term_id.replace(':','_')
+    # term_id = term.id
+    # term_id = term
+
+    # print ontology
+    # print term_id
+
+    # term_r = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/parents?id=%s' % (ontology,urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+    # parents_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/parents?id=%s' % (ontology,term_id))
+    # parents_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/terms/%s/hierarchicalParents' % (ontology,urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+    # term_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/terms/%s' % (ontology,urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+
+    parents_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/terms/%s/hierarchicalAncestors' % (ontology,urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+
+    # parents_req = requests.get(
+
+    parent_ids = map(lambda x: x[u'obo_id'],parents_req.json()['_embedded']['terms'])
+    parent_ids = filter(lambda x: not x is None,parent_ids)
+    
+    # parents = []
+
+    # for p_id in parent_ids:
+
+    #     if 'UBERON' in p_id:
+    #         parents.append(uberon[p_id])
+    #     elif 'DOID' in p_id:
+    #         parents.append(doid[p_id])
+    #     elif 'cl' in p_id:
+    #         parents.append(uberon[p_id])
 
 
-with open(WORK_DIR + 'data/recount/metadata/doid/doid_ancestors.json','r') as in_file:
-    doid_rparents = json.load(in_file)
+    return parent_ids
 
-with open(WORK_DIR + 'data/recount/metadata/doid/doid_descendants.json','r') as in_file:
-    doid_children = json.load(in_file)
+# WORK_DIR = '/Users/Jake/Documents/Projects/Mercator/'
+
+# samples = set([])
+# samples_2_runs = {}
+
+# if not 'metasra' in locals():
+#     with open(WORK_DIR + 'downloads/metaSRA/metasra.v1-4.json','r') as in_file:
+#         metasra = json.load(in_file)
+
+
+# # with open(WORK_DIR + 'data/recount/metadata/doid/doid_ancestors.json','r') as in_file:
+# #     doid_rparents = json.load(in_file)
+
+# # with open(WORK_DIR + 'data/recount/metadata/doid/doid_descendants.json','r') as in_file:
+# #     doid_children = json.load(in_file)
 
 # with open(WORK_DIR + 'data/recount/gtex/tsv_friendly_gtex_meta.tsv','r') as in_file:
 #     reader = csv.reader(in_file,delimiter='\t')
@@ -56,55 +101,52 @@ with open(WORK_DIR + 'data/recount/metadata/doid/doid_descendants.json','r') as 
 
 # mapped_metadata = {}
 
-# with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid.json','r') as in_file:
-#     mapped_metadata = json.load(in_file)
+# # with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid.json','r') as in_file:
+# #     mapped_metadata = json.load(in_file)
 
-# for term in mapped_metadata.keys():
-#     mapped_metadata[term]['runs'] = set(mapped_metadata[term]['runs'])
+# # for term in mapped_metadata.keys():
+# #     mapped_metadata[term]['runs'] = set(mapped_metadata[term]['runs'])
+
+# with open(WORK_DIR + 'data/recount/metadata/doid/doid_rparents.json','r') as in_file:
+#     doid_rparents = json.load(in_file)
     
-with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json','r') as in_file:
-    mapped_metadata = json.load(in_file)
+# # with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json','r') as in_file:
+# #     mapped_metadata = json.load(in_file)
+
+# i = 0
 
 # for sample in samples:
+
+#     if i % 50 == 0:
+#         print i
+
+#     i = i + 1
 
 #     meta_entry = metasra.get(sample,None)
 
 #     if not meta_entry:
-#         runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
+#         # runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
 #         continue
     
 #     term_list = meta_entry['mapped ontology terms']
 
+#     # terms_used = filter(lambda x: 'DOID' in x,term_list)
+    
 #     for term in term_list:
 
-#         # term_label = term.replace(':','_')
+# #         # term_label = term.replace(':','_')
 
 #         if not 'DOID' in term:
 #             continue
 
-
 #         term_entry = mapped_metadata.get(term,None)
 
 #         if not term_entry:
-            
+
 #             term_entry = {}
-            
-#             # print 'http://www.ebi.ac.uk/ols/api/ontologies/doid/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252F%s' % term.replace(':','_')
-
-#             # print 'http://www.ebi.ac.uk/ols/api/ontologies/doid/%s' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term.replace(':','_'),safe=''),safe='')
-
-#             term_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term.replace(':','_'),safe=''),safe=''))
-
-#             # term_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252F%s' % term.replace(':','_'))
-
-#             term_label = term_req.json()['label']
-
-#             term_entry['name'] = term_label
 
 #             term_entry['runs'] = set(samples_2_runs[sample])
-
 #         else:
-
 #             term_entry['runs'] |= set(samples_2_runs[sample])
 
 #         mapped_metadata[term] = term_entry
@@ -112,35 +154,23 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #         parents = doid_rparents.get(term,None)
 
 #         if not parents:
-#            parent_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s/ancestors?size=100' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term.replace(':','_'),safe=''),safe=''))
 
-#             parent_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s/hierarchicalAncestors?size=100' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term.replace(':','_'),safe=''),safe=''))
-
-#             parent_data = parent_req.json()
-
-#             parent_terms = filter(lambda x: x['obo_id'],parent_data['_embedded']['terms'])
-            
-#             parents = map(lambda x: {'id': x['obo_id'], 'name': x['label']},parent_terms)
+#             parents = getParents(term)
 
 #             doid_rparents[term] = parents
-            
 
 #         for parent in parents:
-            
-#             term_entry = mapped_metadata.get(parent['id'],None)
+
+#             term_entry = mapped_metadata.get(parent,None)
 
 #             if not term_entry:
-                
 #                 term_entry = {}
-
-#                 term_entry['name'] = parent['name']
-
 #                 term_entry['runs'] = set(samples_2_runs[sample])
 #             else:
+
 #                 term_entry['runs'] |= set(samples_2_runs[sample])
 
-#             mapped_metadata[parent['id']] = term_entry
-
+#             mapped_metadata[parent] = term_entry
 
 # with open(WORK_DIR + 'data/recount/metadata/tcga_sra_pheno.tsv','r') as in_file:
 
@@ -149,80 +179,98 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #     reader.next()
 
 #     for line in reader:
+#         if i % 50 == 0:
+#             print i
+
+#             i = i + 1
+
+
 #         samp = line[1].strip('.bw')
 
 #         for term_name in line[3:7]:
 #             term_name = re.sub('<','',term_name)
 #             term_name = re.sub('>','',term_name)
 #             term_split = term_name.split(':')
-#             term_id = term_split[0] + ':' + term_split[1]
+#             term = term_split[0] + ':' + term_split[1]
 
-#             if not 'DOID' in term_id:
+#             if not 'DOID' in term:
+
 #                 continue
-# #                 # mesh_mapped = [term_id]
 
-#             # term_entry = mapped_metadata[term_id]
-
-#             term_entry = mapped_metadata.get(term_id,None)
+#             term_entry = mapped_metadata.get(term,None)
 
 #             if not term_entry:
-            
+
 #                 term_entry = {}
-
-#                 term_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term.replace(':','_'),safe=''),safe=''))
-
-#                 term_label = term_req.json()['label']
-
-#                 term_entry['name'] = term_label
-
 #                 term_entry['runs'] = set([samp])
-
 #             else:
-
 #                 term_entry['runs'] |= set([samp])
 
-#             mapped_metadata[term_id] = term_entry
-        
-#             parents = doid_rparents.get(term_id,None)
+#             mapped_metadata[term] = term_entry
+
+#             parents = doid_rparents.get(term,None)
 
 #             if not parents:
-#                 parent_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s/ancestors?size=100' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term_id.replace(':','_'),safe=''),safe=''))
-#                 parent_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s/hierarchicalAncestors?size=100' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % term_id.replace(':','_'),safe=''),safe=''))
-#                 parent_data = parent_req.json()
 
-#                 parent_terms = filter(lambda x: x['obo_id'],parent_data['_embedded']['terms'])
-            
-#                 parents = map(lambda x: {'id': x['obo_id'], 'name': x['label']},parent_terms)
+#                 parents = getParents(term)
 
 #                 doid_rparents[term] = parents
 
 #             for parent in parents:
-                
-#                 term_entry = mapped_metadata.get(parent['id'],None)
+
+#                 term_entry = mapped_metadata.get(parent,None)
 
 #                 if not term_entry:
-                    
 #                     term_entry = {}
-
-#                     term_entry['name'] = parent['name']
-
 #                     term_entry['runs'] = set([samp])
 
 #                 else:
-
 #                     term_entry['runs'] |= set([samp])
 
-#                 mapped_metadata[parent['id']] = term_entry
+#                 mapped_metadata[parent] = term_entry
 
+# with open(WORK_DIR + 'data/recount/metadata/doid/doid_rparents.json','w') as out_file:
+#     # doid_rparents = json.load(in_file)
+#     json.dump(doid_rparents,out_file)
 
 # for term in mapped_metadata.keys():
 #     mapped_metadata[term]['runs'] = list(mapped_metadata[term]['runs'])
 
-# with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json','w') as out_file:
+# with open(WORK_DIR + 'data/recount/metadata/doid/doid_mapped_metadata.json','w') as out_file:
 #     json.dump(mapped_metadata,out_file)
 
-# with open(WORK_DIR + 'data/recount/metadata/doid/doid_ancestors.json','w') as out_file:
-#     json.dump(doid_rparents,out_file)
+# with open(WORK_DIR + 'data/recount/metadata/doid/doid_mapped_metadata.json','r') as in_file:
+#     mapped_metadata = json.load(in_file)
+
+# ########### make children ###############
+
+# doid_children = {}
+
+# i = 0
+
+# for term in mapped_metadata.keys():
+
+#     if i % 10 == 0:
+#         print i
+#     i = i + 1
+    
+#     term_id = term.replace(':','_')
+
+#     child_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/terms/%s/hierarchicalChildren' % ('DOID',urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+
+#     child_ids = map(lambda x: x[u'obo_id'],child_req.json().get('_embedded',{}).get('terms',[]))
+#     child_ids = filter(lambda x: not x is None,child_ids)
+
+#     term_req =  requests.get('http://www.ebi.ac.uk/ols/api/ontologies/%s/terms/%s' % ('DOID',urllib.quote_plus(urllib.quote_plus('http://purl.obolibrary.org/obo/%s' % term_id))))
+#     term_label = term_req.json()['label']
+
+#     doid_children[term] = {'name': term_label, 'children': child_ids}
+
+# with open(WORK_DIR + 'data/recount/metadata/doid/doid_ols_hierarchical_children.json','w') as out_file:
+#     json.dump(doid_children,out_file)
+
+with open(WORK_DIR + 'data/recount/metadata/doid/doid_ols_hierarchical_children.json','r') as in_file:
+    doid_children = json.load(in_file)
 
 # term_2_subjtree = {}
 
@@ -231,20 +279,8 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #     meta_entry = mapped_metadata[key]
 #     term_runs = meta_entry['runs']
 
-#     children = doid_children.get(key,None)
-
-#     if not children:
-#         children_req = requests.get('http://www.ebi.ac.uk/ols/api/ontologies/doid/terms/%s/hierarchicalChildren?size=100' % urllib.quote(urllib.quote('http://purl.obolibrary.org/obo/%s' % key.replace(':','_'),safe=''),safe=''))
-
-#         children_data = children_req.json()
-
-#         children_terms = filter(lambda x: x['obo_id'],children_data.get('_embedded',{'terms': []})['terms'])
-#         children = map(lambda x: {'id': x['obo_id'], 'name': x['label']},children_terms)
-
-#         doid_children[key] = children
-
-#     # children_ids = list(set(map(lambda x: x['id'],children['children'])))
-#     children_ids = list(set(map(lambda x: x['id'],children)))
+#     children = doid_children[key]
+#     children_ids = children['children']
 
 #     term_tree = {}
 #     root_terms = term_runs
@@ -252,11 +288,10 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #     child_terms = []
 
 #     for run in root_terms:
+        
+#         run_children_ids = filter(lambda x: run in mapped_metadata.get(x,{}).get('runs',[]),children_ids)
 
-#         run_children = filter(lambda x: run in mapped_metadata.get(x['id'],{}).get('runs',[]),children)
-
-#         run_children_ids = map(lambda x: x['id'],run_children)
-#         run_children_names = map(lambda x: x['name'],run_children)
+#         run_children_names = map(lambda x: doid_children[x]['name'],run_children_ids)
 
 #         if len(run_children_ids) > 0:
 #             run_label = ' + '.join(run_children_names)
@@ -264,10 +299,9 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #             tree_entry = term_tree.get(run_label,[])
 #             tree_entry.append(run)
 #             term_tree[run_label] = tree_entry
-
 #         else:
-
-#             run_label = mapped_metadata[key]['name']
+            
+#             run_label = doid_children[key]['name']
 #             tree_entry = term_tree.get(run_label,[])
 #             tree_entry.append(run)
 #             term_tree[run_label] = tree_entry
@@ -275,31 +309,26 @@ with open(WORK_DIR + 'data/recount/metadata/doid/mapped_metadata_doid_new.json',
 #     term_2_subjtree[key] = term_tree
 #     if len(term_2_subjtree) % 10 == 0: print len(term_2_subjtree)
 
-# with open(WORK_DIR + 'data/recount/metadata/doid/subjtree_doid.json','w') as out_file:
+# with open(WORK_DIR + 'data/recount/metadata/doid/subjtree_doid_recount.json','w') as out_file:
 #     json.dump(term_2_subjtree,out_file)
 
-with open(WORK_DIR + 'data/recount/metadata/doid/subjtree_doid.json','r') as in_file:
+with open(WORK_DIR + 'data/recount/metadata/doid/subjtree_doid_recount.json','r') as in_file:
     term_2_subjtree = json.load(in_file)
-
 
 metadata_table = []
 
 for key in term_2_subjtree.keys():
-    row = [key.replace(':','_'),mapped_metadata[key]['name']]
+
+    row = [re.sub(':','_',key),doid_children[key]['name']]
 
     row.append(json.dumps(term_2_subjtree[key]))
-
     metadata_table.append(row)
 
-with open(WORK_DIR + 'data/recount/metadata/doid/doid_subjtree_table.csv','w') as out_file:
+with open(WORK_DIR + 'data/recount/metadata/doid/recount_doid_subjtree_table.csv','w') as out_file:
     writer = csv.writer(out_file,delimiter=',')
     writer.writerow(['id','name','termTree'])
-
+    
     for row in metadata_table:
         writer.writerow(row)
-
-with open(WORK_DIR + 'data/recount/metadata/doid/doid_descendants.json','w') as out_file:
-    json.dump(doid_children,out_file)
-
 
 print 'done'

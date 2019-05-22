@@ -16,7 +16,6 @@ with open(WORK_DIR + 'downloads/metaSRA/metasra.v1-4.json','r') as in_file:
 with open(WORK_DIR + 'data/recount/metadata/tsv_friendly_recount_meta.tsv','r') as in_file:
     reader = csv.reader(in_file,delimiter='\t')
     reader.next()
-
     samp_ids = map(lambda x: x[2],reader)
 
 mapped_metadata = {}

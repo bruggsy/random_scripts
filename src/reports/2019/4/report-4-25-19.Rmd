@@ -1,0 +1,77 @@
+---
+title: "4/18/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+```{r kmeans-bulkOnly-composition, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+kmeans.dat <- readRDS('results/recount/clustering/kmeans_200to400_recount_750_dim_noProj_over50_bulkOnly.RDS')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+rownames(tcga.gtex.meta) <- tcga.gtex.meta$data_id
+
+tissue.det.vec <- rep(NA,length(kmeans.dat[[200]]))
+names(tissue.det.vec) <- names(kmeans.dat[[200]])
+tissue.det.vec[rownames(tcga.gtex.meta)] <- tcga.gtex.meta$tissue_detail
+
+results <- c()
+
+for(i in 200:400){
+
+    kmeans.entry <- kmeans.dat[[i]]
+
+    tissue.comp <- 0
+    
+    for(j in unique(kmeans.entry)){
+        
+        j.samps <- names(kmeans.entry)[which(kmeans.entry==j)]
+        ## meta.sub <- tcga.gtex.meta[j.samps,]
+
+        tissue.sub <- tissue.det.vec[j.samps]
+
+        tissue.table <- table(tissue.sub,useNA='no')
+            
+        ## if(length(tissue.table) > 0){
+        ##     tissue.comp <- tissue.comp + (length(tissue.sub) - max(tissue.table))/length(tissue.sub)
+        ## }
+
+
+
+
+        if(length(tissue.table[tissue.table > 1]) > 0){
+            ## max.tissue.prop <- max(tissue.table) / sum(tissue.table)
+
+            ## if(max.tissue.prop < 0.9){
+
+            ##     tissue.comp <- tissue.comp+1
+            ## }
+
+            tissue.comp <- tissue.comp + 1
+        }
+    }
+
+    results <- c(results,tissue.comp)
+
+    print(i)
+
+}
+
+
+```

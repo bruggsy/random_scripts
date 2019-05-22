@@ -1,0 +1,218 @@
+---
+title: "3/21/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+```{r rcpc-tsne, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_750dim_list_noNAs_over50_noSingle_old_recount_protein_ensids.RDS')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=tsne.dat[['40.250']][,1],y2=tsne.dat[['40.250']][,2])
+plot.dat$tissue <- NA
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+    layout(
+        title = 'Protein-coding genes from old recount data'
+    )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+
+```
+
+```{r umap-pca, echo=0, warning=0, message=0,fig.width=20,fig.height=12}
+
+umap.dat <- readRDS('results/recount/umap/recount_umap_list_noNAs_over50_noSingle.RDS')
+
+## tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=umap.dat[['250']][,1],y2=umap.dat[['250']][,2])
+plot.dat$tissue <- NA
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(type = 'scatter', mode='markers') %>%
+    add_trace(
+        x=plot.dat$y1,
+        y=plot.dat$y2,
+        color=plot.dat$tissue) %>%
+    layout(
+        title = 'Umap all genes PCA'
+    ) %>%
+    toWebGL()
+
+## g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+##     layout(
+##         title = 'Umap all genes PCA'
+##     )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+```
+
+```{r tsne-m50-v50, echo=0, warning=0, message=0,fig.width=20,fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_m50_v50.RDS')
+
+## tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2])
+plot.dat$tissue <- NA
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+    layout(
+        title = 'Genes in 50th percentile mean and variance only'
+    )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+```
+
+```{r rc-rcpc-comparisons-mean, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+gene.means <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_centers.RDS')
+gene.vars <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_vars.RDS')
+gene.meds <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_meds.RDS')
+
+gene.df <- data.frame(mean=gene.means,var=gene.vars,med=gene.meds,dif=abs(gene.meds-gene.means))
+
+mygene.info <- read.table('data/recount/my_gene_ens_row_info.tsv',sep='\t',header=F,stringsAsFactors=F)
+gene.dat <- read.table('/www/sites/plotly_merc/private/tmp/incoming/entry_0000.tsv',header=F,sep='\t',row.names=1)
+
+rownames(gene.df) <- rownames(gene.dat)
+gene.df$clean.ids <- gsub('[.].*$','',rownames(gene.df))
+
+pc.genes <- subset(mygene.info,V4 == 'protein_coding')
+pc.gene.df <- subset(gene.df,clean.ids %in% pc.genes$V3)
+
+rcpc.genes <- readRDS('data/recount/old_recount_protein_ensids.RDS')
+rcpc.gene.df <- subset(gene.df,clean.ids %in% rcpc.genes$V3)
+other.gene.df <- subset(gene.df,!(clean.ids %in% rcpc.genes$V3))
+
+mean.plot <- ggplot() + geom_histogram(data=rcpc.gene.df,aes(x=log(mean),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(mean),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not mean')
+
+mean.plot
+
+
+```
+
+
+```{r rc-rcpc-comparisons-var, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+var.plot <- ggplot() + geom_histogram(data=rcpc.gene.df,aes(x=log(var),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(var),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not var')
+
+var.plot
+
+
+```
+
+```{r rc-rcpc-comparisons-med, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+med.plot <- ggplot() + geom_histogram(data=rcpc.gene.df,aes(x=log(med),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(med),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not median')
+
+med.plot
+
+
+```
+
+```{r all-rc-comparisons-mean, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+gene.means <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_centers.RDS')
+gene.vars <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_vars.RDS')
+gene.meds <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_meds.RDS')
+
+gene.df <- data.frame(mean=gene.means,var=gene.vars,med=gene.meds,dif=abs(gene.meds-gene.means))
+
+mygene.info <- read.table('data/recount/my_gene_ens_row_info.tsv',sep='\t',header=F,stringsAsFactors=F)
+gene.dat <- read.table('/www/sites/plotly_merc/private/tmp/incoming/entry_0000.tsv',header=F,sep='\t',row.names=1)
+
+rownames(gene.df) <- rownames(gene.dat)
+gene.df$clean.ids <- gsub('[.].*$','',rownames(gene.df))
+
+## pc.genes <- subset(mygene.info,V4 == 'protein_coding')
+## pc.gene.df <- subset(gene.df,clean.ids %in% pc.genes$V3)
+
+old.recount.info <- readRDS('data/recount/new_old_conversion_recount.RDS')
+
+rc.gene.df <- subset(gene.df,clean.ids %in% old.recount.info$Ensembl.Gene.ID)
+other.gene.df <- subset(gene.df,!(clean.ids %in% old.recount.info$Ensembl.Gene.ID))
+## other.gene.df <- gene.df
+
+
+mean.plot <- ggplot() + geom_histogram(data=rc.gene.df,aes(x=log(mean),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(mean),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not mean')
+
+mean.plot
+
+
+```
+
+```{r all-rc-comparisons-var, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+var.plot <- ggplot() + geom_histogram(data=rc.gene.df,aes(x=log(var),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(var),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not variance')
+
+var.plot
+
+
+```
+
+```{r all-rc-comparisons-med, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+med.plot <- ggplot() + geom_histogram(data=rc.gene.df,aes(x=log(med),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(med),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not median')
+
+med.plot
+
+
+```
+
+```{r all-rc-comparisons-dif, echo=0, warning=0, message=0, fig.width=20,fig.height=12}
+
+dif.plot <- ggplot() + geom_histogram(data=rc.gene.df,aes(x=log(dif),y=..density..),colour='blue',fill='blue',alpha=0.5) +
+    geom_histogram(data=other.gene.df,aes(x=log(dif),y=..density..),colour='red',fill='red',alpha=0.5) +
+    ggtitle('protein-coding genes in old vs not difian')
+
+dif.plot
+
+
+```
+

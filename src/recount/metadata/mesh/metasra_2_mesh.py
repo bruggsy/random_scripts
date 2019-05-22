@@ -193,280 +193,330 @@ with open(WORK_DIR + 'data/recount/metadata/mesh_tree_json.json','r') as in_file
 with open(WORK_DIR + 'data/recount/metadata/bad_mesh_ids_remapped.json','r') as in_file:
     bad_id_mapping = json.load(in_file)
 
-# with open(WORK_DIR + 'data/recount/gtex/tsv_friendly_gtex_meta.tsv','r') as in_file:
-#     reader = csv.reader(in_file,delimiter='\t')
-#     reader.next()
+with open(WORK_DIR + 'data/recount/gtex/tsv_friendly_gtex_meta.tsv','r') as in_file:
+    reader = csv.reader(in_file,delimiter='\t')
+    reader.next()
 
-#     for line in reader:
+    for line in reader:
 
-#         sample = line[2]
-#         run = line[4]
+        sample = line[2]
+        run = line[4]
 
-#         # if run 
+        # if run 
 
-#         samples.add(sample)
+        samples.add(sample)
 
-#         sample_entry = samples_2_runs.get(sample,[])
-#         sample_entry.append(run)
-#         samples_2_runs[sample] = sample_entry
+        sample_entry = samples_2_runs.get(sample,[])
+        sample_entry.append(run)
+        samples_2_runs[sample] = sample_entry
 
 
-# with open(WORK_DIR + 'data/recount/metadata/tsv_friendly_recount_meta.tsv','r') as in_file:
-#     reader = csv.reader(in_file,delimiter='\t')
-#     reader.next()
+with open(WORK_DIR + 'data/recount/metadata/tsv_friendly_recount_meta.tsv','r') as in_file:
+    reader = csv.reader(in_file,delimiter='\t')
+    reader.next()
 
-#     for line in reader:
+    for line in reader:
 
-#         sample = line[2]
-#         run = line[4]
+        sample = line[2]
+        run = line[4]
 
-#         samples.add(sample)
+        samples.add(sample)
 
-#         sample_entry = samples_2_runs.get(sample,[])
-#         sample_entry.append(run)
-#         samples_2_runs[sample] = sample_entry
+        sample_entry = samples_2_runs.get(sample,[])
+        sample_entry.append(run)
+        samples_2_runs[sample] = sample_entry
     
-# mapped_metadata = {}
+mapped_metadata = {}
 
-# runs_not_in_metasra = []
+runs_not_in_metasra = []
 
-# bad_ids = set([])
+bad_ids = set([])
 
-# # # ONLY do UBERON & DOID, leave EFO & CL for a separate organizing script
-# # # only doing UBERON b/c mesh disease is not compatible with the way we're trying to do things.
-# for sample in samples:
+# # ONLY do UBERON & DOID, leave EFO & CL for a separate organizing script
+# # only doing UBERON b/c mesh disease is not compatible with the way we're trying to do things.
+for sample in samples:
 
-#     # if true:
-#     #     break
+    # if true:
+    #     break
 
-#     # if sample == 'SRS282710':
-#     #     break
+    # if sample == 'SRS282710':
+    #     break
 
-#     meta_entry = metasra.get(sample,None)
+    meta_entry = metasra.get(sample,None)
 
-#     if not meta_entry:
-#         runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
-#         continue
+    if not meta_entry:
+        runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
+        continue
     
-#     term_list = meta_entry['mapped ontology terms']
+    term_list = meta_entry['mapped ontology terms']
 
-#     terms_used = filter(lambda x: 'UBERON' in x or 'DOID' in x or 'CL' in x,term_list)
+    terms_used = filter(lambda x: 'UBERON' in x or 'DOID' in x or 'CL' in x,term_list)
 
-#     if len(terms_used) == 0:
-#         runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
+    if len(terms_used) == 0:
+        runs_not_in_metasra = runs_not_in_metasra + samples_2_runs[sample]
 
-#     for term in term_list:
+    for term in term_list:
         
-#         # if 'CVCL' in key_term:
-#         #     continue
-#         # elif 'UBERON' in key_term:
-#         #     term = uberon[key_term]
-#         # elif 'CL' in key_term:
-#         #     term = uberon[key_term]
-#         # elif 'DOID' in key_term:
-#         #     term = doid[key_term]
-#         # elif 'EFO' in key_term:
-#         #     term = efo[key_term]
-#         # else:
-#         #     no_ont_runs |= set(samples_2_runs[sample])
+        # if 'CVCL' in key_term:
+        #     continue
+        # elif 'UBERON' in key_term:
+        #     term = uberon[key_term]
+        # elif 'CL' in key_term:
+        #     term = uberon[key_term]
+        # elif 'DOID' in key_term:
+        #     term = doid[key_term]
+        # elif 'EFO' in key_term:
+        #     term = efo[key_term]
+        # else:
+        #     no_ont_runs |= set(samples_2_runs[sample])
 
-#         # if 'UBERON' in term or 'DOID' in term:
-#         if 'UBERON' in term:
-#             # mesh_mapped, mesh_terms = remap_terms_to_mesh(term,mesh_terms)
-#             mesh_mapped, total_mesh_terms = remap_terms_to_mesh(term,total_mesh_terms)
-#         else:
-#             continue
-#             # mesh_mapped = [term]
+        # if 'UBERON' in term or 'DOID' in term:
+        if 'UBERON' in term:
+            # mesh_mapped, mesh_terms = remap_terms_to_mesh(term,mesh_terms)
+            mesh_mapped, total_mesh_terms = remap_terms_to_mesh(term,total_mesh_terms)
+        else:
+            continue
+            # mesh_mapped = [term]
 
-#         for mesh_term in mesh_mapped:
+        for mesh_term in mesh_mapped:
 
-#             if '.' in mesh_term:
-#                 mesh_term = bad_id_mapping[mesh_term]
-#                 # bad_ids.add(mesh_term)
+            if '.' in mesh_term:
+                mesh_term = bad_id_mapping[mesh_term]
+                # bad_ids.add(mesh_term)
 
-#             term_entry = mapped_metadata.get(mesh_term,None)
+            term_entry = mapped_metadata.get(mesh_term,None)
 
-#             if not term_entry:
+            if not term_entry:
 
-#                 term_entry = {}
-#                 try: 
-#                     term_entry['name'] = mesh_rparents[mesh_term]['name']
-#                 except KeyError:
-#                     bad_ids.add(mesh_term)
+                term_entry = {}
+                try: 
+                    term_entry['name'] = mesh_rparents[mesh_term]['name']
+                except KeyError:
+                    bad_ids.add(mesh_term)
 
-#                 term_entry['runs'] = set(samples_2_runs[sample])
-#             else:
-#                 term_entry['runs'] |= set(samples_2_runs[sample])
+                term_entry['runs'] = set(samples_2_runs[sample])
+            else:
+                term_entry['runs'] |= set(samples_2_runs[sample])
 
-#             mapped_metadata[mesh_term] = term_entry
+            mapped_metadata[mesh_term] = term_entry
 
-#             parents = mesh_rparents[mesh_term]['rparents']
+            parents = mesh_rparents[mesh_term]['rparents']
             
-#             # if not 'EFO' in term and not 'CVCL' in term:
-#             #     parents = mesh_rparents[mesh_term]
-#             # else:
-#             #     parents = []
+            # if not 'EFO' in term and not 'CVCL' in term:
+            #     parents = mesh_rparents[mesh_term]
+            # else:
+            #     parents = []
 
-#             # for parent in parents:
+            # for parent in parents:
 
-#             #     term_entry = mapped_metadata.get(parent,None)
+            #     term_entry = mapped_metadata.get(parent,None)
 
-#             #     if not term_entry:
-#             #         term_entry = {}
+            #     if not term_entry:
+            #         term_entry = {}
 
-#             #         term_entry['runs'] = set(samples_2_runs[sample])
-#             #     else:
-#             #         term_entry['runs'] |= set(samples_2_runs[sample])
+            #         term_entry['runs'] = set(samples_2_runs[sample])
+            #     else:
+            #         term_entry['runs'] |= set(samples_2_runs[sample])
 
-#             #     mapped_metadata[parent] = term_entry
+            #     mapped_metadata[parent] = term_entry
 
-#             # parents = recursive_parents[mesh_term]['rparents']
+            # parents = recursive_parents[mesh_term]['rparents']
 
-#             for parent in parents:
+            for parent in parents:
 
-#                 term_entry = mapped_metadata.get(parent['id'],None)
+                term_entry = mapped_metadata.get(parent['id'],None)
 
-#                 if not term_entry:
-#                     term_entry = {}
-#                     try:
-#                         term_entry['name'] = parent['name']
-#                     except KeyError:
-#                         bad_ids.add(mesh_term)
+                if not term_entry:
+                    term_entry = {}
+                    try:
+                        term_entry['name'] = parent['name']
+                    except KeyError:
+                        bad_ids.add(mesh_term)
 
-#                     term_entry['runs'] = set(samples_2_runs[sample])
-#                 else:
-#                     term_entry['runs'] |= set(samples_2_runs[sample])
+                    term_entry['runs'] = set(samples_2_runs[sample])
+                else:
+                    term_entry['runs'] |= set(samples_2_runs[sample])
 
-#                 mapped_metadata[parent['id']] = term_entry
-#     # samples_done.add(sample)
+                mapped_metadata[parent['id']] = term_entry
+    # samples_done.add(sample)
 
-# with open(WORK_DIR + 'data/recount/metadata/tcga_sra_pheno.tsv','r') as in_file:
+with open(WORK_DIR + 'data/recount/metadata/tcga_sra_pheno.tsv','r') as in_file:
 
-# # with open(WORK_DIR + 'tmp/lung_metasra.tsv','r') as in_file:
+# with open(WORK_DIR + 'tmp/lung_metasra.tsv','r') as in_file:
 
-#     reader = csv.reader(in_file,delimiter='\t')
+    reader = csv.reader(in_file,delimiter='\t')
 
-#     reader.next()
+    reader.next()
 
-#     for line in reader:
-#         samp = line[1].strip('.bw')
+    for line in reader:
+        samp = line[1].strip('.bw')
 
-#         for term_name in line[3:7]:
-#             term_name = re.sub('<','',term_name)
-#             term_name = re.sub('>','',term_name)
-#             term_split = term_name.split(':')
-#             term_id = term_split[0] + ':' + term_split[1]
+        for term_name in line[3:7]:
+            term_name = re.sub('<','',term_name)
+            term_name = re.sub('>','',term_name)
+            term_split = term_name.split(':')
+            term_id = term_split[0] + ':' + term_split[1]
 
-#             if 'UBERON' in term_id:
-#                 mesh_mapped, mesh_terms = remap_terms_to_mesh(term_id,mesh_terms)
-#             else:
-#                 continue
+            if 'UBERON' in term_id:
+                mesh_mapped, mesh_terms = remap_terms_to_mesh(term_id,mesh_terms)
+            else:
+                continue
 
-#             for mesh_term in mesh_mapped:
+            for mesh_term in mesh_mapped:
 
-#                 if '.' in mesh_term:
-#                     mesh_term = bad_id_mapping[mesh_term]
-#                 # else:
-#                 #     continue
+                if '.' in mesh_term:
+                    mesh_term = bad_id_mapping[mesh_term]
+                # else:
+                #     continue
 
-#                 term_entry = mapped_metadata.get(mesh_term,None)
+                term_entry = mapped_metadata.get(mesh_term,None)
 
-#                 if not term_entry:
+                if not term_entry:
 
-#                     term_entry = {}
-#                     try:
-#                         term_entry['name'] = mesh_rparents[mesh_term]['name']
-#                     except KeyError:
-#                         bad_ids.add(mesh_term)
+                    term_entry = {}
+                    try:
+                        term_entry['name'] = mesh_rparents[mesh_term]['name']
+                    except KeyError:
+                        bad_ids.add(mesh_term)
                         
-#                     term_entry['runs'] = set([samp])
-#                 else:
-#                     term_entry['runs'] |= set([samp])
+                    term_entry['runs'] = set([samp])
+                else:
+                    term_entry['runs'] |= set([samp])
 
-#                 mapped_metadata[mesh_term] = term_entry
+                mapped_metadata[mesh_term] = term_entry
 
-#                 parents = mesh_rparents[mesh_term]['rparents']
+                parents = mesh_rparents[mesh_term]['rparents']
 
-#                 for parent in parents:
+                for parent in parents:
 
-#                     term_entry = mapped_metadata.get(parent['id'],None)
+                    term_entry = mapped_metadata.get(parent['id'],None)
 
-#                     if not term_entry:
-#                         term_entry = {}
+                    if not term_entry:
+                        term_entry = {}
 
-#                         try:
-#                             term_entry['name'] = parent['name']
-#                         except KeyError:
-#                             bad_ids.add(mesh_term)
+                        try:
+                            term_entry['name'] = parent['name']
+                        except KeyError:
+                            bad_ids.add(mesh_term)
 
-#                         term_entry['runs'] = set([samp])
-#                     else:
-#                         term_entry['runs'] |= set([samp])
+                        term_entry['runs'] = set([samp])
+                    else:
+                        term_entry['runs'] |= set([samp])
 
-#                     mapped_metadata[parent['id']] = term_entry
+                    mapped_metadata[parent['id']] = term_entry
 
+
+with open(WORK_DIR + 'data/recount/metadata/mesh_tcga_gtex_mapped.tsv','r') as in_file:
+
+# with open(WORK_DIR + 'tmp/lung_metasra.tsv','r') as in_file:
+
+    reader = csv.reader(in_file,delimiter='\t')
+
+    reader.next()
+
+    for line in reader:
+        samp = line[0]
+
+        for term_name in line[1:3]:
+
+
+            for mesh_term in mesh_mapped:
+
+                term_entry = mapped_metadata.get(mesh_term,None)
+
+                if not term_entry:
+
+                    term_entry = {}
+                    try:
+                        term_entry['name'] = mesh_rparents[mesh_term]['name']
+                    except KeyError:
+                        bad_ids.add(mesh_term)
+                        
+                    term_entry['runs'] = set([samp])
+                else:
+                    term_entry['runs'] |= set([samp])
+
+                mapped_metadata[mesh_term] = term_entry
+
+                parents = mesh_rparents[mesh_term]['rparents']
+
+                for parent in parents:
+
+                    term_entry = mapped_metadata.get(parent['id'],None)
+
+                    if not term_entry:
+                        term_entry = {}
+
+                        try:
+                            term_entry['name'] = parent['name']
+                        except KeyError:
+                            bad_ids.add(mesh_term)
+
+                        term_entry['runs'] = set([samp])
+                    else:
+                        term_entry['runs'] |= set([samp])
+
+                    mapped_metadata[parent['id']] = term_entry
                 
 
 
-# for term in mapped_metadata.keys():
-
-#     mapped_metadata[term]['runs'] = list(mapped_metadata[term]['runs'])
+for term in mapped_metadata.keys():
+    mapped_metadata[term]['runs'] = list(mapped_metadata[term]['runs'])
                                          
-# with open(WORK_DIR + 'data/recount/metasra/metasra_uberon_as_mesh.json','w') as out_file:
-#     json.dump(mapped_metadata,out_file)
+with open(WORK_DIR + 'data/recount/metasra/metasra_uberon_as_mesh.json','w') as out_file:
+    json.dump(mapped_metadata,out_file)
 
-# with open(WORK_DIR + 'data/recount/metasra/uberon_mesh_mapping.json','w') as out_file:
-#     json.dump(mesh_terms,out_file)
+with open(WORK_DIR + 'data/recount/metasra/uberon_mesh_mapping.json','w') as out_file:
+    json.dump(mesh_terms,out_file)
 
-# # ######################
+# ######################
 
-# with open(WORK_DIR + 'data/recount/metasra/metasra_uberon_as_mesh.json','r') as in_file:
-#     mapped_metadata = json.load(in_file)
+with open(WORK_DIR + 'data/recount/metasra/metasra_uberon_as_mesh.json','r') as in_file:
+    mapped_metadata = json.load(in_file)
 
-# term_2_subjtree = {}
+term_2_subjtree = {}
 
-# for key in mapped_metadata.keys():
+for key in mapped_metadata.keys():
 
-# #     # if key == 'D014599':
-# #     #     break
+#     # if key == 'D014599':
+#     #     break
     
-#     meta_entry = mapped_metadata[key]
-#     term_runs = meta_entry['runs']
+    meta_entry = mapped_metadata[key]
+    term_runs = meta_entry['runs']
 
-#     children = mesh_children.get(key,{'children': []})
-#     children_ids = list(set(map(lambda x:  x['id'],children['children'])))
+    children = mesh_children.get(key,{'children': []})
+    children_ids = list(set(map(lambda x:  x['id'],children['children'])))
 
-#     term_tree = {}
-#     root_terms = term_runs
+    term_tree = {}
+    root_terms = term_runs
 
-#     child_terms = []
+    child_terms = []
 
-#     for run in root_terms:
+    for run in root_terms:
         
-#         run_children_ids = filter(lambda x: run in mapped_metadata.get(x,{}).get('runs',[]),children_ids)
+        run_children_ids = filter(lambda x: run in mapped_metadata.get(x,{}).get('runs',[]),children_ids)
 
-#         run_children_names = map(lambda x: mesh_rparents[x]['name'],run_children_ids)
+        run_children_names = map(lambda x: mesh_rparents[x]['name'],run_children_ids)
 
-#         if len(run_children_ids) > 0:
-#             run_label = ' + '.join(run_children_names)
+        if len(run_children_ids) > 0:
+            run_label = ' + '.join(run_children_names)
 
-#             tree_entry = term_tree.get(run_label,[])
-#             tree_entry.append(run)
-#             term_tree[run_label] = tree_entry
-#         else:
+            tree_entry = term_tree.get(run_label,[])
+            tree_entry.append(run)
+            term_tree[run_label] = tree_entry
+        else:
 
-#             run_label = mesh_rparents[key]['name']
-#             tree_entry = term_tree.get(run_label,[])
-#             tree_entry.append(run)
-#             term_tree[run_label] = tree_entry
+            run_label = mesh_rparents[key]['name']
+            tree_entry = term_tree.get(run_label,[])
+            tree_entry.append(run)
+            term_tree[run_label] = tree_entry
 
-#     term_2_subjtree[key] = term_tree
-#     if len(term_2_subjtree) % 10 == 0: print len(term_2_subjtree)
+    term_2_subjtree[key] = term_tree
+    if len(term_2_subjtree) % 10 == 0: print len(term_2_subjtree)
 
 
-# with open(WORK_DIR + 'data/recount/metadata/subjtree_uberon_mesh.json','w') as out_file:
-#     json.dump(term_2_subjtree,out_file)
-
+with open(WORK_DIR + 'data/recount/metadata/subjtree_uberon_mesh.json','w') as out_file:
+    json.dump(term_2_subjtree,out_file)
 
 
 with open(WORK_DIR + 'data/recount/metadata/subjtree_uberon_mesh.json','r') as in_file:
@@ -490,7 +540,7 @@ for key in anatomy_entry.keys():
     new_key = ' + '.join(key_split)
 
     key_entry = new_anatomy_entry.get(new_key,[])
-    key_entry.append(anatomy_entry[key])
+    key_entry.extend(anatomy_entry[key])
     new_anatomy_entry[new_key] = key_entry
 
 

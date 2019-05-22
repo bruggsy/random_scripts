@@ -1,0 +1,139 @@
+---
+title: "5/9/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+```{r leiden-tissue-detail-analysis-sim, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+sample.labels <- readRDS('data/tmp/sample_labels_bulkOnly.RDS')
+
+## leiden.001 <- read.table('results/recount/clustering/leiden_pca_r1e-2_over50_bulkOnly_k40_graph.tsv',sep='\t')
+## rownames(leiden.001) <- sample.labels
+
+## leiden.0005 <- read.table('results/recount/clustering/leiden_r5e-3_pca_over50_bulkOnly_k40_graph.tsv',sep='\t')
+## rownames(leiden.0005) <- sample.labels
+
+## leiden.sim.0005 <- read.table('results/recount/clustering/leiden_r5e-3_pca_over50_bulkOnly_k40_sim.tsv',sep='\t')
+
+cluster.df <- read.table('results/recount/clustering/leiden_rsweep_pca_over50_bulkOnly_k40_sim.tsv',sep='\t',row.names=1)
+rownames(cluster.df) <- sample.labels
+colnames(cluster.df) <- c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+rownames(tcga.gtex.meta) <- tcga.gtex.meta$data_id
+
+tissue.det.vec <- rep(NA,length(sample.labels))
+names(tissue.det.vec) <- sample.labels
+tissue.det.vec[rownames(tcga.gtex.meta)] <- tcga.gtex.meta$tissue_detail
+
+clus.pur.list <- lapply(cluster.df,function(x) rep(0,length(unique(x))))
+
+cluster.df$tissue_det <- tissue.det.vec
+
+## cluster.df <- cbind(r001=leiden001$V2,r0005=leiden0005$V2,tissue_det=tissue.det.vec)
+
+tis.res.df <- data.frame()
+
+## clus.pur.list <- list(r001 = rep(0,length(unique(cluster.df$r001))),
+##                      r0005 = rep(0,length(unique(cluster.df$r0005)))
+##                      )
+
+for(label in unique(tissue.det.vec[!is.na(tissue.det.vec)])){
+
+    tis.slice <- subset(cluster.df,tissue_det == label)
+
+    tis.res.df <- rbind(tis.res.df,apply(tis.slice[1:ncol(tis.slice)-1],2,function(x) length(table(x))))
+
+    for(param.label in colnames(tis.slice[1:ncol(tis.slice)-1])){
+
+        entry <- clus.pur.list[[param.label]]
+
+        clus.containing.tissue <- unique(tis.slice[[param.label]])
+
+        entry[clus.containing.tissue+1] <- entry[clus.containing.tissue+1]+1
+
+        clus.pur.list[[param.label]] <- entry
+
+    }
+
+}
+
+colnames(tis.res.df) <- c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001')
+rownames(tis.res.df) <- unique(tissue.det.vec[!is.na(tissue.det.vec)])
+
+tiss.pur.measure <- apply(tis.res.df,2,mean)
+
+clus.pur.measure <- sapply(clus.pur.list,function(x) sum(x[x>0])/length(x[x>0]))
+
+res.df <- data.frame(tissue.purity=tiss.pur.measure,clus.purity=clus.pur.measure)
+res.df <- rbind(res.df,c(1,1))
+rownames(res.df) <- c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001','gold')
+
+## res.df <- res.df[c(1:(nrow(res.df)-2),nrow(res.df)),]
+
+plot.df <- res.df[c(1:(nrow(res.df)-2),nrow(res.df)),]
+
+
+
+g <- ggplot(plot.df,aes(x=tissue.purity/max(c(tissue.purity,clus.purity)),y=clus.purity/max(c(tissue.purity,clus.purity)),label=rownames(plot.df))) +
+    geom_point(shape=15,colour='white',size=6) +
+    geom_text() +
+    ggtitle('Leiden R-sweep K-NN similarity graph analysis') +
+    ylim(0,1) +
+    xlim(0,1) +
+    xlab('Tissue Purity') +
+    ylab('Cluster Purity')
+
+g
+
+clus.nums <- c(sapply(cluster.df[1:ncol(cluster.df)-1],function(x) length(unique(x))),1)
+names(clus.nums) <- rownames(res.df)
+
+## clus.nums
+
+dist <- sqrt((res.df$tissue.purity-1)^2+(res.df$clus.purity-1)^2)
+names(dist) <- rownames(res.df)
+
+median.clus.size <- c(sapply(cluster.df[1:ncol(cluster.df)-1],function(x) median(table(x))),1)
+
+## dist
+
+a <- data.frame(clus.nums,dist,median.clus.size)
+rownames(a) <- rownames(res.df)
+
+a
+
+```
+
+
+```{r leiden-tissue-detail-analysis-sim, echo=0, warning=0, message=0, fig.width=8, fig.height=6}
+
+sample.labels <- readRDS('data/tmp/sample_labels_bulkOnly.RDS')
+cluster.df <- read.table('results/recount/clustering/leiden_rsweep_pca_over50_bulkOnly_k40_sim.tsv',sep='\t',row.names=1)
+rownames(cluster.df) <- sample.labels
+colnames(cluster.df) <- paste('X',c('0.1', '0.075', '0.05', '0.025', '0.01', '0.0075', '0.005', '0.0025', '0.001', '0.00075', '0.0005', '0.00025', '0.00001'),sep='')
+
+plot.df <- data.frame(X=table(cluster.df[['X0.025']]))
+
+g <- ggplot(data=plot.df,aes(x=X.Freq)) + geom_histogram(binwidth=30)
+
+g
+
+```

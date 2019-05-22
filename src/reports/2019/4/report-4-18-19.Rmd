@@ -1,0 +1,65 @@
+---
+title: "4/18/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+```{r clustering-check-louvain, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+louvain.dat <- readRDS('results/recount/clustering/louvain_pca_over50_noSingle_k40.RDS')
+louvain.vec <- louvain.dat$membership
+names(louvain.vec) <- gsub('\"','',louvain.dat$names)
+
+recount.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+
+first.ile.proj <- subset(recount.meta,proj_id == 'SRP048801')
+second.ile.proj <- subset(recount.meta,proj_id == 'SRP042228')
+
+first.ile.ass <- louvain.vec[first.ile.proj$run_id]
+second.ile.ass <- louvain.vec[second.ile.proj$run_id]
+
+table(first.ile.ass)
+
+table(second.ile.ass)
+
+## table(c(first.ile.ass,second.ile.ass))
+
+```
+
+```{r clustering-check-kmeans145, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+kmeans.dat <- readRDS('results/recount/clustering/kmeans_100to150_recount_750_dim_noProj_over50_noSingle.RDS')
+kmeans.vec <- kmeans.dat[[145]]
+## names(louvain.vec) <- gsub('\"','',louvain.dat$names)
+
+## recount.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+
+## first.ile.proj <- subset(recount.meta,proj_id == 'SRP0148801')
+## second.ile.proj <- subset(recount.meta,proj_id == 'SRP042228')
+
+first.ile.ass <- kmeans.vec[first.ile.proj$run_id]
+second.ile.ass <- kmeans.vec[second.ile.proj$run_id]
+
+table(first.ile.ass)
+
+table(second.ile.ass)
+
+## table(c(first.ile.ass,second.ile.ass))
+
+```

@@ -1,0 +1,248 @@
+---
+title: "3/28/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+<!-- ```{r rcpc-tsne, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_mgt0.RDS') -->
+
+<!-- tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS') -->
+
+<!-- plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2]) -->
+<!-- plot.dat$tissue <- 'NA' -->
+<!-- plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail -->
+
+<!-- g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>% -->
+<!--     layout( -->
+<!--         title = 'Genes with mean log(TPM) > 0' -->
+<!--     ) -->
+
+<!-- ## g <- ggplot() + -->
+<!-- ##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5) -->
+                       
+<!-- g -->
+
+
+<!-- ``` -->
+
+<!-- ```{r rcpc-tsne-mgt0-protein, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_mgt0_protein.RDS') -->
+
+<!-- tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS') -->
+
+<!-- plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2]) -->
+<!-- plot.dat$tissue <- 'NA' -->
+<!-- plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail -->
+
+<!-- g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>% -->
+<!--     layout( -->
+<!--         title = 'Protein-coding genes with mean log(TPM) > 0' -->
+<!--     ) -->
+
+<!-- ## g <- ggplot() + -->
+<!-- ##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5) -->
+                       
+<!-- g -->
+
+<!-- ``` -->
+
+```{r rc-pc-var-hist, echo=0, warning=0, message=0, fig.width=10, fig.height=10}
+
+pca.dat <- readRDS('results/recount/pca/recount_250_dim_noScaled_noProj_over50_noSingle_protein_coding.RDS')
+pca.norm.dat <- readRDS('results/recount/pca/recount_250_dim_noProj_over50_noSingle_protein_coding.RDS')
+
+pca.vars <- apply(pca.dat,2,var)
+pca.norm.vars <- apply(pca.norm.dat,2,var)
+
+recount.protein.coding <- readRDS('data/recount/recount_protein_coding.RDS')
+
+gene.dist.info <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_colparams.RDS')
+gene.vars <- gene.dist.info$vars
+names(gene.vars) <- gsub('[.].*$','',rownames(gene.dist.info))
+gene.vars <- gene.vars[recount.protein.coding$V3]
+total.unscaled.var <- sum(gene.vars)
+
+total.scaled.var <- nrow(recount.protein.coding)
+
+plot.df <- data.frame(i=1:250,noScale=pca.vars/total.unscaled.var,scale=pca.norm.vars/total.scaled.var)
+
+mplot.df <- melt(plot.df,id.vars='i')
+
+total.var <- apply(plot.df,2,sum)
+
+g <- ggplot() +
+    geom_point(data=mplot.df,aes(x=i,y=value,colour=variable)) +
+    ggtitle(sprintf('Total variance explained: %.2f%%, protein-coding genes',total.var[3]*100)) +
+    ylab('% of variance explained')
+
+g
+
+
+```
+
+```{r rc-var-hist, echo=0, warning=0, message=0, fig.width=10, fig.height=10}
+
+pca.dat <- readRDS('results/recount/pca/recount_250_dim_noScaled_noProj_over50_noSingle.RDS')
+pca.norm.dat <- readRDS('results/recount/pca/recount_750_dim_noProj_over50_noSingle.RDS')
+
+pca.vars <- apply(pca.dat,2,var)
+pca.norm.vars <- apply(pca.norm.dat,2,var)
+
+## recount.protein.coding <- readRDS('data/recount/recount_protein_coding.RDS')
+
+gene.dist.info <- readRDS('results/recount/pca/tmp/recount_over50_noSingle_colparams.RDS')
+gene.vars <- gene.dist.info$vars
+## names(gene.vars) <- gsub('[.].*$','',rownames(gene.dist.info))
+## gene.vars <- gene.vars[recount.protein.coding$V3]
+total.unscaled.var <- sum(gene.vars)
+
+total.scaled.var <- nrow(gene.dist.info)
+
+plot.df <- data.frame(i=1:250,noScale=pca.vars/total.unscaled.var,scale=pca.norm.vars[1:250]/total.scaled.var)
+
+mplot.df <- melt(plot.df,id.vars='i')
+
+var.expl.norm <- sum(pca.norm.vars)/total.scaled.var
+
+g <- ggplot() +
+    geom_point(data=mplot.df,aes(x=i,y=value,colour=variable)) +
+    ggtitle(sprintf('Total variance explained: %.2f%%, all genes',var.expl.norm*100)) +
+    ylab('% of variance explained')
+
+g
+
+
+```
+
+
+<!-- ```{r rcpc-tsne-protein-norm, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_list_noNAs_over50_noSingle_norm_protein_coding.RDS') -->
+
+<!-- tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS') -->
+
+<!-- plot.dat <- data.frame(y1=tsne.dat[['40.250']][,1],y2=tsne.dat[['40.250']][,2]) -->
+<!-- plot.dat$tissue <- 'NA' -->
+<!-- plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail -->
+
+<!-- g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>% -->
+<!--     layout( -->
+<!--         title = 'Protein-coding genes normalized' -->
+<!--     ) -->
+
+<!-- ## g <- ggplot() + -->
+<!-- ##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5) -->
+                       
+<!-- g -->
+
+<!-- ``` -->
+
+```{r rcpc-tsne-protein-norm-noNAs, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_protein_coding.RDS')
+## tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_protein_coding_2.RDS')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2])
+plot.dat$tissue <- 'NA'
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+    layout(
+        title = 'Protein-coding with nv=250'
+    )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+```
+
+```{r rcpc-tsne-pc-mirna-other-norm-noNAs, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_pc_lncrna_mirna_snrna_snorna.RDS')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2])
+plot.dat$tissue <- 'NA'
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+    layout(
+        title = 'Protein-coding, miRNA, lincRNA, snRNA, snoRNA with nv=400'
+    )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+```
+
+
+
+```{r rc-tsne-all-norm-noNAs, echo=0, warning=0, message=0, fig.width=20, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS')
+
+tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS')
+
+plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2])
+plot.dat$tissue <- 'NA'
+plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail
+
+g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>%
+    layout(
+        title = 'All genes with nv=750'
+    )
+
+## g <- ggplot() +
+##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5)
+                       
+g
+
+```
+
+<!-- ```{r rc-tsne-pcmirna-norm-noNAs, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_protein_mirna.RDS') -->
+
+<!-- tcga.gtex.meta <- readRDS('src/tsne_shiny/data/gtex_tcga_meta.RDS') -->
+
+<!-- plot.dat <- data.frame(y1=tsne.dat[,1],y2=tsne.dat[,2]) -->
+<!-- plot.dat$tissue <- 'NA' -->
+<!-- plot.dat[tcga.gtex.meta$data_id,]$tissue <- tcga.gtex.meta$tissue_detail -->
+
+<!-- g <- plot_ly(plot.dat,x=~y1,y=~y2,mode='markers',type='scattergl',color=~tissue) %>% -->
+<!--     layout( -->
+<!--         title = 'Protein-coding and miRNA genes nv = 750' -->
+<!--     ) -->
+
+<!-- ## g <- ggplot() + -->
+<!-- ##     geom_point(data=plot.dat,aes(x=y1,y=y2,colour=tissue),size=0.5) -->
+                       
+<!-- g -->
+
+<!-- ``` -->

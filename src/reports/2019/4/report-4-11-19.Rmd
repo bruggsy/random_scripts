@@ -1,0 +1,334 @@
+---
+title: "4/11/19"
+output: html_document
+---
+
+```{r setup, echo=0, warning=0, message=0}
+
+library(knitr)
+opts_knit$set(upload.fun = image_uri, root.dir = '/Users/Jake/Documents/Projects/Mercator/')
+
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(dbplyr)
+library(dplyr)
+library(RPostgreSQL)
+library(jsonlite)
+library(plotly)
+library(arrangements)
+
+```
+
+<!-- ```{r overplot-check, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS') -->
+<!-- tsne.dat <- data.frame(tsne.dat) -->
+
+<!-- tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(tsne.dat),] -->
+
+<!-- proj.vec <- rep('other',nrow(tsne.dat)) -->
+<!-- proj.vec[tsne.meta$proj_id == 'SRP025982'] <- 'SRP025982' -->
+
+<!-- tsne.dat$proj <- proj.vec -->
+
+<!-- g <- ggplot() + geom_jitter(data=tsne.dat,aes(x=X1,y=X2,colour=proj),size=1) + -->
+<!--     scale_colour_manual(values=c('other'='gray','SRP025982'='orange')) -->
+
+<!-- g -->
+
+<!-- ``` -->
+
+<!-- ```{r overplot-check-jitter, echo=0, warning=0, message=0, fig.width=20, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS') -->
+<!-- tsne.dat <- data.frame(tsne.dat) -->
+<!-- tsne.dat <- tsne.dat + matrix(data=rnorm(2*nrow(tsne.dat),sd=0.5),ncol=2) -->
+
+<!-- tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(tsne.dat),] -->
+
+<!-- proj.vec <- rep('other',nrow(tsne.dat)) -->
+<!-- proj.vec[tsne.meta$proj_id == 'SRP025982'] <- 'SRP025982' -->
+
+<!-- tsne.dat$proj <- proj.vec -->
+
+
+<!-- g <- ggplot() + geom_jitter(data=tsne.dat,aes(x=X1,y=X2,colour=proj),size=1) + -->
+<!--     scale_colour_manual(values=c('other'='gray','SRP025982'='orange')) -->
+
+<!-- g -->
+
+<!-- ``` -->
+
+
+<!-- ```{r tsne-pc-etc-onlysmall-projs, echo=0, warning=0, message=0, fig.width=15, fig.height=12} -->
+
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_pc_lncrna_mirna_snrna_snorna.RDS') -->
+<!-- tsne.dat <- data.frame(tsne.dat) -->
+
+<!-- tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(tsne.dat),] -->
+
+<!-- louvain.vec <- readRDS('results/recount/clustering/louvain_vec_pca_over50_noSingle_k40_pc_lncrna_mirna_snrna_snorna.RDS') -->
+
+<!-- tsne.subset <- subset(tsne.meta,proj_id != 'TCGA' & proj_id != 'SRP012682') -->
+
+<!-- tsne.dat <- tsne.dat[rownames(tsne.subset),] -->
+
+<!-- tsne.dat$louvain <- as.factor(louvain.vec[rownames(tsne.dat)]) -->
+<!-- tsne.dat$proj_id <- tsne.subset$proj_id -->
+<!-- ## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=louvain),size=1)  -->
+
+<!-- g <- plot_ly(tsne.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~louvain, -->
+<!--              text=~paste('ID: ',proj_id)) %>% -->
+<!--     layout( -->
+<!--         title = 'No TCGA or GTEX') -->
+
+<!-- g -->
+
+<!-- ``` -->
+
+<!-- ```{r louvain-comp-hist, echo=0, warning=0, message=0, fig.width=15, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_pc_lncrna_mirna_snrna_snorna.RDS') -->
+<!-- tsne.dat <- data.frame(tsne.dat) -->
+
+<!-- tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(tsne.dat),] -->
+
+<!-- louvain.vec <- readRDS('results/recount/clustering/louvain_vec_pca_over50_noSingle_k40_pc_lncrna_mirna_snrna_snorna.RDS') -->
+
+<!-- tsne.dat$louvain <- louvain.vec[rownames(tsne.dat)] -->
+<!-- tsne.dat$proj_id <- tsne.meta$proj_id -->
+
+<!-- plot.df <- data.frame() -->
+
+<!-- for(i in unique(louvain.vec)){ -->
+
+<!--     louvain.sub <- subset(tsne.dat,louvain==i) -->
+<!--     num.projs <- length(unique(louvain.sub$proj_id)) -->
+
+<!--     plot.df <- rbind(plot.df,data.frame(louvain=i,num=num.projs)) -->
+
+<!-- } -->
+
+<!-- two.proj.clus <- subset(plot.df,num>1) -->
+
+<!-- freq.df <- data.frame() -->
+
+<!-- for(i in two.proj.clus$louvain){ -->
+
+<!--     louvain.sub <- subset(tsne.dat,louvain==i) -->
+<!--     louvain.tab <- table(louvain.sub$proj_id) -->
+
+<!--     less.prop <- max(louvain.tab) / sum(louvain.tab) -->
+
+<!--     freq.df <- rbind(freq.df,data.frame(louvain=i,freq=less.prop)) -->
+
+<!-- } -->
+
+<!-- g <- ggplot() + geom_histogram(data=freq.df,aes(x=freq)) -->
+
+<!-- g -->
+
+
+<!-- ``` -->
+
+<!-- ```{r louvain-proj-hist, echo=0, warning=0, message=0, fig.width=15, fig.height=12} -->
+
+<!-- tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle_pc_lncrna_mirna_snrna_snorna.RDS') -->
+<!-- tsne.dat <- data.frame(tsne.dat) -->
+
+<!-- tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(tsne.dat),] -->
+
+<!-- louvain.vec <- readRDS('results/recount/clustering/louvain_vec_pca_over50_noSingle_k40_pc_lncrna_mirna_snrna_snorna.RDS') -->
+
+<!-- tsne.dat$louvain <- louvain.vec[rownames(tsne.dat)] -->
+<!-- tsne.dat$proj_id <- tsne.meta$proj_id -->
+
+<!-- plot.df <- data.frame() -->
+
+<!-- for(i in unique(louvain.vec)){ -->
+
+<!--     louvain.sub <- subset(tsne.dat,louvain==i) -->
+<!--     num.projs <- length(unique(louvain.sub$proj_id)) -->
+
+<!--     plot.df <- rbind(plot.df,data.frame(louvain=i,num=num.projs)) -->
+
+<!-- } -->
+
+<!-- g <- ggplot() + geom_histogram(data=plot.df,aes(x=num)) + ggtitle('Number of projects per cluster') -->
+
+<!-- g -->
+
+
+<!-- ``` -->
+
+```{r dbscan-e42-m30, echo=0, warning=0, message=0, fig.width=15, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS')
+tsne.dat <- data.frame(tsne.dat)
+
+tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+rownames(tsne.meta) <- tsne.meta$run_id
+tsne.meta <- tsne.meta[rownames(tsne.dat),]
+
+db.dat <- read.table('results/recount/clustering/recount_dbscan_eps42_m30_auto.csv',sep=',')
+
+rownames(db.dat) <- gsub('\"','',db.dat$V1)
+
+tsne.dat$db.clus <- as.factor(db.dat[rownames(tsne.dat),'V2'])
+tsne.dat$proj_id <- tsne.meta$proj_id
+
+ g <- plot_ly(tsne.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~db.clus, 
+              text=~paste('ID: ',proj_id)) %>% 
+     layout( 
+         title = 'DBSCAN')
+
+
+## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=db.clus))
+
+g
+
+```
+
+```{r louvain-k40, echo=0, warning=0, message=0, fig.width=15, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS')
+tsne.dat <- data.frame(tsne.dat)
+
+tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+rownames(tsne.meta) <- tsne.meta$run_id
+tsne.meta <- tsne.meta[rownames(tsne.dat),]
+
+louvain.dat <- readRDS('results/recount/clustering/louvain_pca_over50_noSingle_k40.RDS')
+louvain.vec <- louvain.dat$membership
+names(louvain.vec) <- gsub('\"','',louvain.dat$names)
+
+rownames(db.dat) <- gsub('\"','',db.dat$V1)
+
+tsne.dat$louvain <- as.factor(louvain.vec[rownames(tsne.dat)])
+tsne.dat$proj_id <- tsne.meta$proj_id
+
+ g <- plot_ly(tsne.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~louvain, 
+              text=~paste('ID: ',proj_id)) %>% 
+     layout( 
+         title = 'Louvain k=100')
+
+
+## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=db.clus))
+
+g
+
+```
+
+```{r louvain-k100, echo=0, warning=0, message=0, fig.width=15, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS')
+tsne.dat <- data.frame(tsne.dat)
+
+tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+rownames(tsne.meta) <- tsne.meta$run_id
+tsne.meta <- tsne.meta[rownames(tsne.dat),]
+
+louvain.dat <- readRDS('results/recount/clustering/louvain_pca_over50_noSingle_k100.RDS')
+louvain.vec <- louvain.dat$membership
+names(louvain.vec) <- gsub('\"','',louvain.dat$names)
+
+rownames(db.dat) <- gsub('\"','',db.dat$V1)
+
+tsne.dat$louvain <- as.factor(louvain.vec[rownames(tsne.dat)])
+tsne.dat$proj_id <- tsne.meta$proj_id
+
+ g <- plot_ly(tsne.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~louvain, 
+              text=~paste('ID: ',proj_id)) %>% 
+     layout( 
+         title = 'Louvain k=100')
+
+
+## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=db.clus))
+
+g
+
+```
+
+
+
+```{r louvain-normed, echo=0, warning=0, message=0, fig.width=15, fig.height=12}
+
+tsne.dat <- readRDS('results/recount/tsne/recount_tsne_pca_noNAs_over50_noSingle.RDS')
+tsne.dat <- data.frame(tsne.dat)
+
+tsne.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS')
+rownames(tsne.meta) <- tsne.meta$run_id
+tsne.meta <- tsne.meta[rownames(tsne.dat),]
+
+louvain.dat <- readRDS('results/recount/clustering/louvain_pca_norm_over50_noSingle_k40.RDS')
+louvain.vec <- louvain.dat$membership
+names(louvain.vec) <- gsub('\"','',louvain.dat$names)
+
+rownames(db.dat) <- gsub('\"','',db.dat$V1)
+
+tsne.dat$louvain <- as.factor(louvain.vec[rownames(tsne.dat)])
+tsne.dat$proj_id <- tsne.meta$proj_id
+
+ g <- plot_ly(tsne.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~louvain, 
+              text=~paste('ID: ',proj_id)) %>% 
+     layout( 
+         title = 'Louvain Normed')
+
+
+## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=db.clus))
+
+g
+
+```
+
+<!-- ```{r umap, echo=0, warning=0, message=0, fig.width=15, fig.height=12} -->
+
+<!-- umap.dat <- readRDS('results/recount/umap/recount_umap_list_noNAs_over50_noSingle.RDS')[['250']] -->
+<!-- umap.dat <- data.frame(umap.dat) -->
+
+<!-- tnse.meta <- readRDS('src/tsne_shiny/data/recount_meta.RDS') -->
+<!-- rownames(tsne.meta) <- tsne.meta$run_id -->
+<!-- tsne.meta <- tsne.meta[rownames(umap.dat),] -->
+
+<!-- louvain.dat <- readRDS('results/recount/clustering/louvain_pca_norm_over50_noSingle_k40.RDS') -->
+<!-- louvain.vec <- louvain.dat$membership -->
+<!-- names(louvain.vec) <- gsub('\"','',louvain.dat$names) -->
+
+<!-- rownames(db.dat) <- gsub('\"','',db.dat$V1) -->
+
+<!-- umap.dat$louvain <- as.factor(louvain.vec[rownames(umap.dat)]) -->
+<!-- umap.dat$proj_id <- tsne.meta$proj_id -->
+
+<!--  g <- plot_ly(umap.dat,x=~X1,y=~X2,mode='markers',type='scattergl',color=~louvain,  -->
+<!--               text=~paste('ID: ',proj_id)) %>%  -->
+<!--      layout(  -->
+<!--          title = 'UMAP') -->
+
+
+<!-- ## g <- ggplot() + geom_point(data=tsne.dat,aes(x=X1,y=X2,colour=db.clus)) -->
+
+<!-- g -->
+
+<!-- ``` -->
+
+
+Projects that have GI Mesh annotation:
+
+TCGA
+GTEX (SRP012682)
+SRP010181: HLA subtypes using colorectal cancer samples
+SRP042228: Pediatric chron's study using ileal samples
+SRP048801: Ileal immune maturation in Pediatric Crohn's Disease
+
